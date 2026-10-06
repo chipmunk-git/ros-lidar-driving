@@ -26,5 +26,7 @@ for r in rows:
 
 print(df)
 
+df.to_csv('output.csv', index=False)
+
 cursor.close()
 conn.close()
