@@ -10,8 +10,40 @@ load_dotenv()
 ROS_PC_IP = os.getenv('ROS_PC_IP')  # .env 파일을 작성하거나 실행 전 환경변수로 ROS PC IP 지정
 ROSBRIDGE_PORT = 9090
 
+LINEAR_SPEED = 0.1
+ANGULAR_SPEED = 0.5
 
-def lidar_callback(message):
+
+def publish_action(cmd_vel_publisher, action):
+    linear_x = 0.0
+    angular_z = 0.0
+
+    if action == 'go_forward':
+        linear_x = LINEAR_SPEED
+
+    elif action == 'turn_left':
+        angular_z = ANGULAR_SPEED
+
+    elif action == 'turn_right':
+        angular_z = -ANGULAR_SPEED
+
+    message = roslibpy.Message({
+        'linear': {
+            'x': linear_x,
+            'y': 0.0,
+            'z': 0.0
+        },
+        'angular': {
+            'x': 0.0,
+            'y': 0.0,
+            'z': angular_z
+        }
+    })
+
+    cmd_vel_publisher.publish(message)
+
+
+def lidar_callback(message, cmd_vel_publisher):
     ranges = np.array(message['ranges'])
 
     # 방향별 거리 데이터
@@ -37,6 +69,9 @@ def lidar_callback(message):
     print('right:', round(right_dist, 2))
     print('action:', action)
 
+    # 주행 명령 발행
+    publish_action(cmd_vel_publisher, action)
+
 
 def main():
     client = roslibpy.Ros(
@@ -50,7 +85,17 @@ def main():
         'sensor_msgs/LaserScan'
     )
 
-    lidar_listener.subscribe(lidar_callback)
+    cmd_vel_publisher = roslibpy.Topic(
+        client,
+        '/cmd_vel',
+        'geometry_msgs/Twist'
+    )
+
+    cmd_vel_publisher.advertise()
+
+    lidar_listener.subscribe(
+        lambda message: lidar_callback(message, cmd_vel_publisher)
+    )
 
     try:
         client.run_forever()
@@ -60,6 +105,7 @@ def main():
 
     finally:
         lidar_listener.unsubscribe()
+        cmd_vel_publisher.unadvertise()
         client.terminate()
 
 
