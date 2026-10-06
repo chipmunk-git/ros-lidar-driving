@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'mock_lidar_publisher = mock_lidar.mock_lidar_publisher:main',
         ],
     },
 )
