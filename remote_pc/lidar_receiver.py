@@ -4,6 +4,8 @@ import numpy as np
 import roslibpy
 from dotenv import load_dotenv
 
+from db_helper import DB, DB_CONFIG
+
 
 load_dotenv()
 
@@ -43,7 +45,7 @@ def publish_action(cmd_vel_publisher, action):
     cmd_vel_publisher.publish(message)
 
 
-def lidar_callback(message, cmd_vel_publisher):
+def lidar_callback(message, cmd_vel_publisher, db):
     ranges = np.array(message['ranges'])
 
     # 방향별 거리 데이터
@@ -72,6 +74,13 @@ def lidar_callback(message, cmd_vel_publisher):
     # 주행 명령 발행
     publish_action(cmd_vel_publisher, action)
 
+    # LiDAR 데이터 저장
+    if db.insert_lidar(ranges.tolist(), action):
+        print('데이터베이스 저장 완료')
+
+    else:
+        print('데이터베이스 저장 실패')
+
 
 def main():
     client = roslibpy.Ros(
@@ -91,10 +100,13 @@ def main():
         'geometry_msgs/Twist'
     )
 
+    # 데이터베이스 객체 생성
+    db = DB(**DB_CONFIG)
+
     cmd_vel_publisher.advertise()
 
     lidar_listener.subscribe(
-        lambda message: lidar_callback(message, cmd_vel_publisher)
+        lambda message: lidar_callback(message, cmd_vel_publisher, db)
     )
 
     try:
