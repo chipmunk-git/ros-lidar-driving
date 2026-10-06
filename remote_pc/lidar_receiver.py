@@ -90,7 +90,7 @@ def main():
 
     lidar_listener = roslibpy.Topic(
         client,
-        '/mock_scan',
+        '/scan',
         'sensor_msgs/LaserScan'
     )
 
